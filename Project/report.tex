@@ -1,0 +1,145 @@
+\documentclass{article}
+
+\setlength{\parindent}{0pt}         % remove paragraph indentation
+
+\title{Ray Tracing A Messy Kitchen Counter}
+\author{Joanne Hong (20470862)}
+
+\begin{document}
+
+\maketitle
+
+The purpose of this project was to display a visually pleasing image using various ray tracing techniques we learned in class. This project will build on top of my work in assignment 4. Note that for assignment 4, I did not implement any extensions.
+
+\section{Topics}
+
+\begin{itemize}
+  \item Photorealism via Ray tracing:
+    \begin{itemize}
+      \item Mirror reflections
+      \item Refractions
+      \item Phong shading
+      \item Antialising
+      \item Texture mapping
+      \item Bump mapping
+      \item Soft shadows
+      \item Constructive solid geometry
+    \end{itemize}
+  \item Animation of gaseous particles
+\end{itemize}
+
+\section{Statement}
+
+The scene I generated contains:
+\begin{itemize}
+  \item A metal kettle and kitchen knife blade: portrays mirror reflections
+  \item A wine cup and bottle: portrays refractions
+  \item A brick wall: portrays bump mapping
+  \item A marble countertop: portrays texture mapping
+  \item A piece of cheese: portrays constructive solid geometry
+\end{itemize}
+
+Phong shading, antialising and soft shadows should be evident on all objects. \\
+
+I also created animation of steam evaporating from the kettle. The motion of the individual particles will be modelled and different images will be generated and recorded to convey particle motion. Refer to the technical outline for more details.
+
+\section{Technical Outline/Implementation}
+
+\subsection{Mirror reflections and refractions}
+The reflections and refractions were implemented as recursive secondary rays. Reflective rays reflect at the same angle as their incident rays. The computation for reflection rays can be found in subroutine \texttt{generate\_reflectio\_rays} in \texttt{Project.cpp}. For refractive rays, their angles are dependent on the refraction index of the mediums. According to this Wiki article(https://en.wikipedia.org/wiki/Refractive\_index), the refractive index of air is around 1 and glass around 1.62. I used this information for my project. Moreover, the computation for this can be found in \texttt{generate\_refraction\_rays} in \texttt{Project.cpp}. The depth of the reflections can be specified with \texttt{RECURSE} constant in \texttt{Project.cpp}.
+
+\subsection{Phong Shading}
+For Phong shading, I first preprocessed the vertex normals of my \texttt{Mesh} instances. This was accomplished using a blender tool that generates the appropriate \texttt{.obj} files for me. Here, the vertex normals are labelled with \texttt{vn}. I edited \texttt{Mesh.cpp} appropriately to store the vertex normals in \texttt{std::vector}. Then, at runtime, the vertex normals of each triangle in a mesh were interpolated with techniques used in class for Gouraud shading. In particular, I used barycentric coefficients to linearly combine the vertex normals. As a result, the shading looks a lot smoother and less faceted. Note that barycentric coefficients were solved using Cramer's rule [3].
+
+\subsection{Antialiasing}
+For antialising, I used the method of adaptive supersampling. I averaged the radiance of surrounding pixels when they  contain different objects (or faces if the same objects) to avoid the "jagged" look. In \texttt{Project.cpp}, I globally keep track of \texttt{int nodes[x][y]} and \texttt{int faces[x][y]} which are node ID and face numbers of all the pixels \texttt{(x,y)} seen so far.
+
+\subsection{Bump and Texture Mapping}
+For bump and texture mapping, I used the \texttt{lodepng} library to load the image as an array of unsigned chars representing their rgb components. The code for this can be found in \texttt{PhongMaterial.cpp}. In order to be able to specify the image to be uploaded, I extended the \texttt{Lua} command for \texttt{material} to accept file names (for bump and texture mapping separately). These changes can be found in \texttt{scene\_lua.cpp}. \\
+
+For texture mapping, the rgb files are directly used as the colour of the pixel (see \texttt{get\_texture} in \texttt{Project.cpp}). For bump mapping, the image used is interperated as a normal map, and the rgb values are used as the normals (see \texttt{recompute\_normal\_for\_bump\_mapping}). \\
+
+The texture I used for the countertop is in \texttt{Assets/marble.png} and the normal map is in \texttt{Assets/brick.png}.
+
+\subsection{Soft shadows}
+For soft shadows, I generated distributed rays at primary ray intersections to simulate an area light source instead of a point light source. For my ray tracer, the area of light is a line and so the generated image may look like it's lit under a fluorescent light. The number of shadow rays and the linear distance between them are specified in \texttt{NUM\_SHADOW\_RAYS} and \texttt{SHADOW\_SHIFT} respectively.
+
+\subsection{Constructive Geometry}
+For constructive geometry (CSG), I extended my intersection subroutine implemented in assignment 4 with a "difference" operator (the extension can be found in subroutine \texttt{find\_node\_with\_smallest\_t} in \texttt{Project.cpp}). The difference operator essentially keeps track of the entering and exiting intersection pairs for each primary ray on objects of interest and "subtracts" these intervals. Futhermore, the interval of children of CSG objects are subtracted from the parents. \\
+
+The CSG object in my project is a piece of swiss cheese wit holes. A group of sphere objects are subtracted from a single cube object to achieve this effect.
+
+\subsection{Particle System Animation}
+For the particle system animation, the following classes were created:
+\begin{itemize}
+  \item \texttt{Particle}: encapsulates velocity, acceleration and lifespan of a single particle
+  \item \texttt{ParticleSystem}: encapsulates logic for adding new particles (at random locations) and deleting dead particles and updating all the particles in the system
+  \item \texttt{Particles}: a subclass of \texttt{Primitive} to distinguish between other \texttt{GeometryNode} instances in \texttt{Lua} file
+\end{itemize}
+
+Each particle starts at a same position, but different starting velocities (upward and left or right) and a downward (in y direction) acceleration due to gravity [2]. After each ray tracing interval, velocities are updated according to acceleration and the positions are updated. If the lifespan of a particle expires, it is removed from the pool by \texttt{ParticleSystem}. New particles are added at each time interval as well. Also, the lifespan of the individual particles determine their transparency.
+
+Note that to create different images for the animation, in the \texttt{scene\_lua.cpp} file, I call \texttt{Project\_Render} procedure \texttt{T} times (\texttt{T} is specified in the command line argument). For each iteration \texttt{i}, a file \texttt{project\_[i].png} is generated. At the end, a linux command line \texttt{convert} is used to create a gif out of these images.
+
+\subsection{Feature Enable}
+To enable and disable some features, I've added flags at the top off \texttt{Project.cpp} file:
+\begin{itemize}
+  \item \texttt{SUPER\_SAMPLING}
+  \item \texttt{PHONG}
+  \item \texttt{CSG}
+\end{itemize}
+
+\subsection{Development Process}
+For development, I created a private repo in University of Waterloo's gitlab and pushed commits regularly. This allowed me to roll back to past versions to find bugs.
+
+\subsection{Improvements}
+There is a lot of room for improvements in efficiency. There was some optimization done with bounding volumes (assignment 4) and adaptive antialising, but additions like distributed rays for soft shadows slow down the ray tracing process proportionally. Maybe an 11th objective, spaital subdivision would have been appropriate since my scene is relatively easy to divide into subdivisions. \\
+
+I have also wanted to implement radiosity. The approximated ambient lighting isn't enough make the photo look realistic.
+\section{Manual}
+\subsection{Comprehensive Guide to Running the Program}
+As usual, run \texttt{premake4 gmake} and then \texttt{make} in the \texttt{project} directory. Then, move to the \texttt{Assets folder} and run \texttt{../Project [n = number of keyframes]}. This will create n images with the name \texttt{project\_[i].png} where $i \leq n$. It will also create a gif file in the same directory if $n > 1$. Note that the lua file used for the final image is in \texttt{Assets/project.lua}.
+
+\section{Bibliography}
+\begin{itemize}
+  \item [1] Glassner, A. (ed) An Introduction to Ray Tracing. Academic Press New York, N.Y. 1989
+  \item [2] W. T. Reeves, "Particle Systems - A Technique for Modeling a Class of Fuzzy Objects", Computer Graphics, vol. 17, no. 3, pp 359-376, 1983
+  \item [3] Ericson, C. Real-Time Collision Detection. CRC Press, 2004
+\end{itemize}
+
+\section{Acknowledgments}
+Thanks to Stephen Mann and Gegory Philbrick for helping me with my proposal. Also thanks to user John Calsbeek for his summary of Christer Ericson's Real-Time Collision Detection on Stack Overflow (https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates) - it showed me the most efficient way to compute barycentric coordinates.
+
+\newpage
+
+\section{Objectives}
+
+\textbf{Name: Joanne Hong} \\
+
+\textbf{User ID: j46hong} \\
+
+\textbf{Student ID: 20470862} \\
+
+\begin{enumerate}
+  \item[\_\_\_ 1:]  Mirror reflections on at least one object (\texttt{Assets/reflection.png} and \texttt{Assets/no\_reflection.png})
+
+  \item[\_\_\_ 2:]  Refraction on at least one object (\texttt{Assets/refraction.png} and \texttt{Assets/no\_refraction.png})
+
+  \item[\_\_\_ 3:]  Phong shading on objects (\texttt{Assets/phong.png} and \texttt{Assets/no\_phong.png})
+
+  \item[\_\_\_ 4:]  Adaptive supersampling for antialiasing (\texttt{Assets/antialiasing.png} and \texttt{Assets/no\_antialiasing})
+
+  \item[\_\_\_ 5:]  Texture mapping on at least one object (\texttt{Assets/texture\_mapping.png} and \texttt{Assets/no\_texture\_mapping})
+
+  \item[\_\_\_ 6:]  Bump mapping on at least one object (\texttt{Assets/bump\_mapping.png})
+
+  \item[\_\_\_ 7:]  Soft shadows (\texttt{Assets/soft\_shadows.png} and \texttt{Assets/no\_soft\_shadows.png})
+
+  \item[\_\_\_ 8:]  Constructive solid geometry used for at least one object (\texttt{Assets/csg.png} and \texttt{Assets/no\_csg.png})
+
+  \item[\_\_\_ 9:]  Unique scene is portrayed in the image (\texttt{screenshot.png})
+
+  \item[\_\_\_ 10:]  One animation of "fuzzy" or "gaseous" object by modelling with particle systems (\texttt{Assets/project.gif})
+\end{enumerate}
+
+\end{document}
