@@ -1,4 +1,4 @@
-# CS488 Fall 2015 Project Code
+# CS488 Fall 2017 Project Code
 
 ---
 
@@ -56,5 +56,6 @@ To generate the images, `mv Assets` and then `../Project [number of images]`. Th
 - Unique scene is portrayed in the image
 - One animation of "fuzzy" or "gaseous" object by modelling with particle systems
 
-## Raytraced image
+## Raytraced images
 ![image](Project/screenshot.png)
+![gif](Project/Assets/project.gif)
