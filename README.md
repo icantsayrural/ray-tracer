@@ -42,7 +42,7 @@ say **A0** for example, and run the following terminal commands in order to comp
     $ make
 
 ## Generate images
-To generate the images, `mv Assets` and then `../Project [number of images]`. The images generated will be `project_{i}.png` for some i to represent its order in the animation. Furthermore, these images will be keyframes for my particle system animation. If you just want one image, simply run `../Project 1`. By specifying 1 image, the particle system will also not be displayed in the image. Otherwise, if you request more than 1 keyframe, project.gif for the animation will be also generated in the `Assets` folder.
+To generate the images, `cd Assets` and then `../Project [number of images]`. The images generated will be `project_{i}.png` for some i to represent its order in the animation. Furthermore, these images will be keyframes for my particle system animation. If you just want one image, simply run `../Project 1`. By specifying 1 image, the particle system will also not be displayed in the image. Otherwise, if you request more than 1 keyframe, project.gif for the animation will be also generated in the `Assets` folder.
 
 ## Objectives
 - Mirror reflections on at least one object
@@ -58,4 +58,6 @@ To generate the images, `mv Assets` and then `../Project [number of images]`. Th
 
 ## Raytraced images
 ![image](Project/screenshot.png)
+
+
 ![gif](Project/Assets/project.gif)
